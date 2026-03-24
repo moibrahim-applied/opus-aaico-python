@@ -6,7 +6,7 @@
 
 ## What is opus-aaico
 
-`opus-aaico` is a Python SDK for the OPUS workflow automation platform. It wraps all 64 OPUS REST API endpoints into typed Python methods with both synchronous and asynchronous clients.
+`opus-aaico` is a Python SDK for the OPUS workflow automation platform. It wraps the core OPUS REST API endpoints (workflows, jobs, files) into typed Python methods with both synchronous and asynchronous clients.
 
 - **Package:** `pip install opus-aaico`
 - **Import:** `import opus_aaico`
@@ -76,11 +76,6 @@ Environment variables (read automatically if constructor params not provided):
 client.workflows     # Workflow management + run() orchestrator
 client.jobs          # Job lifecycle + polling
 client.files         # File upload/download/search
-client.reviews       # Human review management
-client.api_keys      # API key CRUD
-client.credits       # Credit balance and usage
-client.policies      # Policy management
-client.users         # User and project lookups
 ```
 
 ---
@@ -291,130 +286,6 @@ file_url = client.files.multipart_upload(
 client.files.multipart_abort(file_key: str, upload_id: str) -> AbortUploadResponse
 ```
 
----
-
-## Reviews Resource
-
-```python
-# Initiate a review
-client.reviews.initiate(
-    job_execution_id: str,
-    type: str,                      # "AGENT", "HUMAN", "HUMAN_TASK"
-    node_id: str,
-    node_name: str,
-    workflow_id: str,
-    review_payload: dict,           # data for reviewer
-    input_definition_schema: dict,
-    output_definition_schema: dict,
-    webhook_callback: str,          # webhook URL
-    assignee_id: str = None,
-    max_duration: int = 24,         # hours
-) -> ReviewInitiateResponse
-
-# List reviews
-client.reviews.list(type=None, status=None, offset=0, max_results=25) -> Any
-
-# Get review details
-client.reviews.get(review_id: str, type: str = None) -> Any
-
-# Pick/release a review
-client.reviews.pick(review_id: str) -> Any
-client.reviews.release(review_id: str) -> Any
-
-# Submit review result
-client.reviews.submit_result(
-    review_id: str,
-    status: str,
-    review_result: dict,            # {variable_name: ..., value: ...}
-) -> ReviewSubmitResponse
-
-# Submit review output
-client.reviews.submit_output(
-    review_id: str,
-    accept: bool,
-    updated: dict,
-    comment: str = None,
-) -> Any
-
-# Submit human task output
-client.reviews.submit_human_task_output(review_id: str, updated: dict) -> Any
-
-# Check review status
-client.reviews.check_status(job_id: str) -> Any
-```
-
----
-
-## API Keys Resource
-
-```python
-client.api_keys.create(
-    name: str,
-    scopes: list[str],
-    expires_at: str = None,
-    key_prefix: str = None,
-) -> ApiKey                         # .key only returned on creation
-
-client.api_keys.list() -> list
-client.api_keys.list_scopes() -> ScopesResponse
-client.api_keys.rotate(key_id: str) -> Any
-client.api_keys.reset_limits(key_id: str) -> Any
-client.api_keys.set_active(key_id: str, active: bool) -> Any
-client.api_keys.revoke(key_id: str) -> None
-client.api_keys.delete(key_id: str) -> None
-```
-
----
-
-## Credits Resource
-
-```python
-client.credits.get_balance() -> CreditBalance  # .credits, .credits_left
-client.credits.create_balance(user_id: str, organization_id: str) -> CreditBalance
-client.credits.get_usage() -> Any
-client.credits.get_workflow_usage(workflow_id: str) -> Any
-client.credits.record_usage(
-    usage_type: str,               # "workflowGeneration" or "nodeExecution"
-    workflow_id: str = None,
-    node_id: str = None,
-    node_type: str = None,
-    node_name: str = None,
-    credits_used: float = 0,
-    description: str = None,
-    generation_id: str = None,
-) -> Any
-```
-
----
-
-## Policies Resource
-
-```python
-client.policies.list_types() -> Any
-client.policies.upload(file_path: str, policy_type: str) -> Policy  # multipart/form-data
-client.policies.list(
-    page=1, limit=25, sort="DESC",
-    policy_type=None, title=None, keyword=None,
-) -> PolicyListResponse
-client.policies.get(policy_id: str) -> Policy
-client.policies.download(policy_id: str) -> Any
-client.policies.get_summary(policy_id: str) -> PolicySummary
-client.policies.update_summary(policy_id: str, summary: str = None) -> Any
-client.policies.get_organization_summary() -> Any
-client.policies.regenerate_blueprint() -> Any
-client.policies.set_active(policy_id: str, active: bool) -> Any
-client.policies.delete(policy_id: str) -> None
-```
-
----
-
-## Users Resource
-
-```python
-client.users.list(workspace_id: str = None) -> Any
-client.users.list_projects(workspace_id: str = None) -> Any
-client.users.get_projects(workspace_id: str = None) -> Any
-```
 
 ---
 
@@ -461,31 +332,19 @@ The SDK automatically retries on 429 and 5xx with exponential backoff (1s, 2s, 4
 ## Enums
 
 ```python
-from opus_aaico.types import JobStatus, ReviewType, ReviewStatus, MediaType
+from opus_aaico.types import JobStatus, MediaType, ArchiveStatus, WorkflowSource
 
 # Job statuses
 JobStatus.PENDING | IN_PROGRESS | COMPLETED | FAILED | WAITING | CANCELLED | UNKNOWN
 
-# Review types
-ReviewType.AGENT | HUMAN | HUMAN_TASK
-
-# Review statuses
-ReviewStatus.PENDING | COMPLETED | FAILED | OVERDUE | DISPATCHED | NODE_DISPATCHED | NODE_DISPATCH_FAILED
-
 # Media types
 MediaType.IMAGE | DOCUMENT
-
-# Credit usage types
-CreditUsageType.WORKFLOW_GENERATION | NODE_EXECUTION
 
 # Archive status
 ArchiveStatus.ALL | ARCHIVED_ONLY | NON_ARCHIVED_ONLY
 
 # Workflow source
 WorkflowSource.WKG | USER_GENERATED
-
-# Review setting type
-ReviewSettingType.HUMAN_REVIEW | AGENTIC_REVIEW
 ```
 
 ---
@@ -559,10 +418,6 @@ JobSearchItem:        title, description, job_execution_id, workflow_id, status,
 JobSearchResponse:    total_count, jobs: list[JobSearchItem]
 FileMetadata:         file_id, file_uri, file_name, file_mime_type, file_extension
 FileSearchResponse:   total_count, files: list[FileMetadata]
-ApiKey:               id, name, key, scopes, is_active, created_at, expires_at
-CreditBalance:        user_id, organization_id, credits, credits_left
-Policy:               id, file_name, policy_type, summary, summary_status, policy_enabled
-ReviewItem:           id, job_execution_id, type, status, node_id, node_name
 ```
 
 ---

@@ -14,7 +14,7 @@ Unofficial Python SDK for the [OPUS](https://opus.com) workflow automation platf
 
 Key capabilities:
 
-- **Full API coverage** -- all OPUS endpoints wrapped in typed Python methods
+- **Core API coverage** -- workflows, jobs, and files wrapped in typed Python methods
 - **Sync and async** -- `OpusClient` for scripts, `AsyncOpusClient` for high-throughput services
 - **High-level orchestration** -- `workflows.run()` handles the entire job lifecycle in one call
 - **Type safety** -- Pydantic v2 models for all requests and responses
@@ -81,11 +81,6 @@ The client organizes the API into resource namespaces:
 | `client.workflows` | Workflow management and orchestration | `get`, `list`, `generate`, `run`, `share`, `send_email` |
 | `client.jobs` | Job lifecycle | `initiate`, `execute`, `get_status`, `get_results`, `poll`, `search` |
 | `client.files` | File upload, download, and search | `upload`, `download`, `search`, `generate`, `multipart_upload` |
-| `client.reviews` | Human review and task management | `initiate`, `list`, `get`, `pick`, `submit_result`, `submit_output` |
-| `client.api_keys` | API key management | `create`, `list`, `rotate`, `revoke`, `delete` |
-| `client.credits` | Credit balance and usage tracking | `get_balance`, `get_usage`, `record_usage` |
-| `client.policies` | Organizational policy management | `upload`, `list`, `get`, `get_summary`, `set_active` |
-| `client.users` | User and project lookups | `list`, `list_projects`, `get_projects` |
 
 ## Usage Examples
 
@@ -275,21 +270,16 @@ src/opus_aaico/
 ├── _async.py                # AsyncOpusClient (asynchronous)
 ├── _exceptions.py           # Typed error hierarchy
 ├── _constants.py            # Base URL, defaults, version
-├── resources/               # One module per API resource
+├── resources/
 │   ├── workflows.py         # Workflow CRUD + run() orchestrator
 │   ├── jobs.py              # Job lifecycle + polling
-│   ├── files.py             # File upload/download + multipart
-│   ├── reviews.py           # Human review management
-│   ├── api_keys.py          # API key CRUD
-│   ├── credits.py           # Credit tracking
-│   ├── policies.py          # Policy management
-│   └── users.py             # User and project lookups
+│   └── files.py             # File upload/download + multipart
 ├── types/                   # Pydantic v2 models for all DTOs
-│   ├── enums.py             # JobStatus, ReviewType, etc.
+│   ├── enums.py             # JobStatus, MediaType, etc.
 │   ├── shared.py            # Base model, UserDetails, etc.
 │   ├── workflows.py         # Workflow, WorkflowRunResult, etc.
 │   ├── jobs.py              # JobAudit, JobSearchItem, etc.
-│   └── ...                  # One file per resource
+│   └── files.py             # FileMetadata, FileSearchResponse, etc.
 └── _utils/
     ├── polling.py           # Exponential backoff polling
     └── files.py             # Presigned URL upload helpers
