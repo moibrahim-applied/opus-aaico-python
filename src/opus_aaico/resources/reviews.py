@@ -75,8 +75,11 @@ class SyncReviews(SyncResource):
         self,
         review_id: str,
         status: str,
-        review_result: dict[str, Any],
+        review_result: list[dict[str, Any]] | dict[str, Any],
     ) -> ReviewSubmitResponse:
+        # API expects reviewResult as an array
+        if isinstance(review_result, dict):
+            review_result = [review_result]
         body: dict[str, Any] = {
             "reviewId": review_id,
             "status": status,
@@ -179,8 +182,11 @@ class AsyncReviews(AsyncResource):
         self,
         review_id: str,
         status: str,
-        review_result: dict[str, Any],
+        review_result: list[dict[str, Any]] | dict[str, Any],
     ) -> ReviewSubmitResponse:
+        # API expects reviewResult as an array
+        if isinstance(review_result, dict):
+            review_result = [review_result]
         body: dict[str, Any] = {
             "reviewId": review_id,
             "status": status,

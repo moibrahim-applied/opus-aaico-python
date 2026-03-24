@@ -105,6 +105,8 @@ def raise_for_status(status_code: int, body: Any, request_id: str | None = None)
         message = body.get("message", body.get("error", message))
     elif isinstance(body, str):
         message = body
+    elif isinstance(body, list):
+        message = "; ".join(str(item) for item in body)
 
     error_cls = STATUS_CODE_MAP.get(status_code, APIError)
 

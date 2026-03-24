@@ -1,6 +1,6 @@
 # opus-aaico Python SDK -- Complete Reference
 
-> Drop this file into your Claude Code skills directory to give Claude full knowledge of the opus-aaico SDK. It can then help you write integration code, debug issues, and build applications on top of OPUS workflows.
+> Drop this file into your AI coding assistant's context to provide full knowledge of the opus-aaico SDK. This enables AI-assisted integration code, debugging, and application development on top of OPUS workflows.
 
 ---
 
