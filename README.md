@@ -1,6 +1,6 @@
 # opus-aaico
 
-Official Python SDK for the [OPUS](https://opus.com) workflow automation platform by [AAICO](https://aaico.com).
+Unofficial Python SDK for the [OPUS](https://opus.com) workflow automation platform by [AAICO](https://aaico.com).
 
 [![PyPI version](https://img.shields.io/pypi/v/opus-aaico.svg)](https://pypi.org/project/opus-aaico/)
 [![Python versions](https://img.shields.io/pypi/pyversions/opus-aaico.svg)](https://pypi.org/project/opus-aaico/)

@@ -1,4 +1,4 @@
-"""Official Python SDK for the OPUS workflow automation platform."""
+"""Unofficial Python SDK for the OPUS workflow automation platform."""
 
 __version__ = "0.1.0"
 
