@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "opus-aaico"
-version = "0.2.0"
+version = "0.3.0"
 description = "Unofficial Python SDK for the OPUS workflow automation platform"
 readme = "README.md"
 license = "MIT"
@@ -43,7 +43,10 @@ dev = [
 [project.urls]
 Homepage = "https://opus.com"
 Documentation = "https://docs.opus.com/sdk/python"
-Repository = "https://github.com/aaico/opus-aaico-python"
+Repository = "https://github.com/moibrahim-applied/opus-aaico-python"
+
+[project.scripts]
+opus-aaico = "opus_aaico._cli:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/opus_aaico"]
