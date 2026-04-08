@@ -162,6 +162,67 @@ result = client.workflows.run(
 
 The `run()` method handles the full lifecycle: initiate job, execute with payload, poll until complete, fetch results and audit data.
 
+### Compound: Workflow Health Check
+
+```python
+# Instant health report -- combines workflow details + job search by status + audit sampling
+health = client.workflows.health(
+    workflow_id: str,
+    days: int = 7,              # how many days to analyze
+    sample_audits: int = 20,    # how many jobs to sample for node-level stats
+) -> WorkflowHealthReport
+```
+
+Returns a `WorkflowHealthReport` with:
+- `workflow_name` -- name of the workflow
+- `days_analyzed` -- period covered
+- `total_runs`, `completed`, `failed`, `cancelled`, `in_progress` -- job counts
+- `success_rate` -- percentage (e.g. 94.3)
+- `avg_execution_time_seconds` -- average across sampled jobs
+- `slowest_node` -- node name with highest avg execution time
+- `slowest_node_avg_ms` -- its avg time in milliseconds
+- `most_failing_node` -- node name with most failures
+- `most_failing_node_count` -- number of failures
+- `node_stats` -- list of `NodeHealthStats` per node (name, total_executions, failures, failure_rate, avg_execution_time_ms, max_execution_time_ms)
+- `stuck_jobs` -- list of job IDs that have been IN_PROGRESS for over 1 hour
+
+Under the hood: 5 API calls (workflow details + 4 job searches by status) + up to 40 audit calls for node-level stats.
+
+```python
+health = client.workflows.health("wf-123", days=30)
+print(health.success_rate)        # 94.3
+print(health.slowest_node)        # "Document Extraction"
+print(health.most_failing_node)   # "Compliance Check"
+print(health.model_dump())        # full dict of all fields
+```
+
+### Compound: Retry Failed Jobs
+
+```python
+# Find all failed jobs and re-run each with its original input payload
+report = client.workflows.retry_failed(
+    workflow_id: str,
+    since_days: int = 7,        # how far back to look
+    max_retries: int = 50,      # max number of jobs to retry
+) -> RetryReport
+```
+
+Returns a `RetryReport` with:
+- `workflow_id` -- the workflow
+- `total_failed` -- how many failed jobs were found
+- `retried` -- how many were successfully re-submitted
+- `skipped` -- how many were skipped (no input payload found or error)
+- `results` -- list of `RetryResult` (original_job_id, new_job_id, status, error)
+
+Under the hood: searches failed jobs, fetches each job's detail to extract the original input payload, then initiates + executes a new job with that same payload.
+
+```python
+report = client.workflows.retry_failed("wf-123", since_days=7)
+print(f"Retried {report.retried} of {report.total_failed} failed jobs")
+for r in report.results:
+    print(f"  {r.original_job_id} -> {r.new_job_id} ({r.status})")
+```
+
 ---
 
 ## Jobs Resource
