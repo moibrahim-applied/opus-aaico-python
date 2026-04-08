@@ -108,3 +108,54 @@ class WorkflowRunResult(_BaseModel):
     outputs: dict[str, Any] | None = None
     execution_time: float | None = None
     audit: Any | None = None
+
+
+class NodeHealthStats(_BaseModel):
+    """Per-node health statistics."""
+
+    name: str
+    total_executions: int = 0
+    failures: int = 0
+    failure_rate: float = 0.0
+    avg_execution_time_ms: float = 0.0
+    max_execution_time_ms: float = 0.0
+
+
+class WorkflowHealthReport(_BaseModel):
+    """Health report for a workflow over a time period."""
+
+    workflow_id: str
+    workflow_name: str | None = None
+    days_analyzed: int = 7
+    total_runs: int = 0
+    completed: int = 0
+    failed: int = 0
+    cancelled: int = 0
+    in_progress: int = 0
+    success_rate: float = 0.0
+    avg_execution_time_seconds: float = 0.0
+    slowest_node: str | None = None
+    slowest_node_avg_ms: float = 0.0
+    most_failing_node: str | None = None
+    most_failing_node_count: int = 0
+    node_stats: list[NodeHealthStats] = []
+    stuck_jobs: list[str] = []
+
+
+class RetryResult(_BaseModel):
+    """Result of retrying a failed job."""
+
+    original_job_id: str
+    new_job_id: str | None = None
+    status: str = "pending"
+    error: str | None = None
+
+
+class RetryReport(_BaseModel):
+    """Report from retry_failed operation."""
+
+    workflow_id: str
+    total_failed: int = 0
+    retried: int = 0
+    skipped: int = 0
+    results: list[RetryResult] = []

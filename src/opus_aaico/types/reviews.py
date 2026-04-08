@@ -22,7 +22,7 @@ class ReviewResult(_BaseModel):
 class ReviewSubmitResponse(_BaseModel):
     review_id: str | None = Field(None, alias="reviewId")
     status: str | None = None
-    review_result: ReviewResult | None = Field(None, alias="reviewResult")
+    review_result: list[ReviewResult] | ReviewResult | None = Field(None, alias="reviewResult")
 
 
 class ReviewItem(_BaseModel):
