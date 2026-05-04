@@ -9,6 +9,7 @@ from collections import defaultdict
 from datetime import datetime, timedelta, timezone
 from typing import TYPE_CHECKING, Any, Callable
 
+from opus_aaico._utils.ids import require_uuid
 from opus_aaico.resources._base import AsyncResource, SyncResource
 from opus_aaico.types.enums import JobStatus
 from opus_aaico.types.workflows import (
@@ -20,7 +21,9 @@ from opus_aaico.types.workflows import (
     RetryResult,
     Workflow,
     WorkflowHealthReport,
+    WorkflowObject,
     WorkflowRunResult,
+    WorkflowVersionsResponse,
 )
 
 logger = logging.getLogger("opus_aaico")
@@ -36,11 +39,29 @@ class SyncWorkflows(SyncResource):
         super().__init__(client)
         self._jobs = jobs_resource
 
-    # ---- single workflow -------------------------------------------------
+    # ---- single workflow (v2) -------------------------------------------
 
-    def get(self, workflow_id: str) -> Workflow:
-        data = self._client.request("GET", f"/workflow/{workflow_id}")
-        return Workflow(**data)
+    def get(self, workflow_id: str) -> WorkflowObject:
+        """Fetch the full v2 workflow object: nodes, edges, schemas.
+
+        Requires a UUID. The legacy 16-char short IDs from the v1 OPUS URL
+        bar are no longer accepted by the API; passing one raises
+        ``ValidationError`` with a clear message pointing the user at
+        ``app.opus.com`` to copy the new UUID.
+        """
+        require_uuid(workflow_id, name="workflow_id")
+        data = self._client.request(
+            "GET", f"/reference-workflow/v2/workflow-object/{workflow_id}"
+        )
+        return WorkflowObject(**data)
+
+    def list_versions(self, workflow_id: str) -> WorkflowVersionsResponse:
+        """List all versions of a v2 workflow."""
+        require_uuid(workflow_id, name="workflow_id")
+        data = self._client.request(
+            "GET", f"/executor/workflow/{workflow_id}/versions"
+        )
+        return WorkflowVersionsResponse(**data)
 
     # ---- listing ---------------------------------------------------------
 
@@ -413,11 +434,29 @@ class AsyncWorkflows(AsyncResource):
         super().__init__(client)
         self._jobs = jobs_resource
 
-    # ---- single workflow -------------------------------------------------
+    # ---- single workflow (v2) -------------------------------------------
 
-    async def get(self, workflow_id: str) -> Workflow:
-        data = await self._client.request("GET", f"/workflow/{workflow_id}")
-        return Workflow(**data)
+    async def get(self, workflow_id: str) -> WorkflowObject:
+        """Fetch the full v2 workflow object: nodes, edges, schemas.
+
+        Requires a UUID. The legacy 16-char short IDs from the v1 OPUS URL
+        bar are no longer accepted by the API; passing one raises
+        ``ValidationError`` with a clear message pointing the user at
+        ``app.opus.com`` to copy the new UUID.
+        """
+        require_uuid(workflow_id, name="workflow_id")
+        data = await self._client.request(
+            "GET", f"/reference-workflow/v2/workflow-object/{workflow_id}"
+        )
+        return WorkflowObject(**data)
+
+    async def list_versions(self, workflow_id: str) -> WorkflowVersionsResponse:
+        """List all versions of a v2 workflow."""
+        require_uuid(workflow_id, name="workflow_id")
+        data = await self._client.request(
+            "GET", f"/executor/workflow/{workflow_id}/versions"
+        )
+        return WorkflowVersionsResponse(**data)
 
     # ---- listing ---------------------------------------------------------
 

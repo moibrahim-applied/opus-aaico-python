@@ -75,3 +75,55 @@ def test_raise_for_status_500():
 
 def test_raise_for_status_ok():
     raise_for_status(200, {})  # Should not raise
+
+
+def test_raise_for_status_list_message_nestjs_style():
+    """NestJS validators return {'message': [...]} — must not crash __str__."""
+    body = {
+        "statusCode": 400,
+        "message": ["workflowId must be a UUID", "title should not be empty"],
+    }
+    with pytest.raises(ValidationError) as exc_info:
+        raise_for_status(400, body)
+    err = exc_info.value
+    rendered = str(err)
+    assert "workflowId must be a UUID" in rendered
+    assert "title should not be empty" in rendered
+    assert "(status=400)" in rendered
+
+
+def test_raise_for_status_list_message_single_item():
+    body = {"statusCode": 400, "message": ["referenceEntityId must be a UUID"]}
+    with pytest.raises(ValidationError) as exc_info:
+        raise_for_status(400, body)
+    assert "referenceEntityId must be a UUID" in str(exc_info.value)
+
+
+def test_str_handles_non_string_message_defensively():
+    """Even if message somehow becomes non-string, __str__ must not crash."""
+    err = APIError(message=["a", "b"], status_code=500)
+    rendered = str(err)
+    assert "a" in rendered
+    assert "b" in rendered
+
+
+def test_cookie_auth_401_becomes_not_supported_error():
+    """401 'No auth cookie provided' -> NotSupportedError with clear message."""
+    from opus_aaico._exceptions import NotSupportedError
+
+    body = {"statusCode": 401, "message": "No auth cookie provided"}
+    with pytest.raises(NotSupportedError) as exc_info:
+        raise_for_status(401, body)
+    msg = str(exc_info.value)
+    assert "browser session cookie" in msg
+    assert "rejects API keys" in msg
+
+
+def test_normal_401_still_raises_authentication_error():
+    """Real auth failures still surface as AuthenticationError, not NotSupportedError."""
+    from opus_aaico._exceptions import NotSupportedError
+
+    body = {"statusCode": 401, "message": "Invalid or expired API key"}
+    with pytest.raises(AuthenticationError) as exc_info:
+        raise_for_status(401, body)
+    assert not isinstance(exc_info.value, NotSupportedError)

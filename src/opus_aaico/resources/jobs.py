@@ -5,6 +5,7 @@ from __future__ import annotations
 from collections.abc import Sequence
 from typing import Any, Callable
 
+from opus_aaico._utils.ids import require_uuid
 from opus_aaico._utils.polling import poll_async, poll_sync
 from opus_aaico.resources._base import AsyncResource, SyncResource
 from opus_aaico.types.enums import JobStatus
@@ -36,6 +37,7 @@ class SyncJobs(SyncResource):
         description: str,
         ref_user_id: str | None = None,
     ) -> JobInitiateResponse:
+        require_uuid(workflow_id, name="workflow_id")
         body: dict[str, Any] = {
             "workflowId": workflow_id,
             "title": title,
@@ -161,6 +163,7 @@ class AsyncJobs(AsyncResource):
         description: str,
         ref_user_id: str | None = None,
     ) -> JobInitiateResponse:
+        require_uuid(workflow_id, name="workflow_id")
         body: dict[str, Any] = {
             "workflowId": workflow_id,
             "title": title,

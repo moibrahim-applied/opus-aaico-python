@@ -26,3 +26,16 @@ class CreditUsage(_BaseModel):
     credits_used: float | None = Field(None, alias="creditsUsed")
     description: str | None = None
     user: UserDetails | None = None
+
+
+class CreditHistoryEntry(_BaseModel):
+    """One row from /credits/history (v2 endpoint)."""
+
+    date: str | None = None
+    balance_after: float | None = None
+    credits_used: float | None = None
+    description: str | None = None
+    workflow_id: str | None = None
+    workflow_name: str | None = None
+    user_id: str | None = None
+    user_name: str | None = None

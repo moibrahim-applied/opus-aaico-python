@@ -1,15 +1,14 @@
-"""Tests for the Credits resource."""
+"""Tests for the Credits resource (v2)."""
 
 from __future__ import annotations
-
-import json
 
 import pytest
 from pytest_httpx import HTTPXMock
 
 from opus_aaico._client import SyncHTTPClient
+from opus_aaico._exceptions import NotSupportedError
 from opus_aaico.resources.credits import SyncCredits
-from opus_aaico.types.credits import CreditBalance
+from opus_aaico.types.credits import CreditHistoryEntry
 
 
 @pytest.fixture
@@ -24,114 +23,78 @@ def credits_res(client: SyncHTTPClient) -> SyncCredits:
     return SyncCredits(client)
 
 
-class TestGetBalance:
-    def test_get_balance_returns_credit_balance(
+class TestHistory:
+    def test_history_parses_string_numbers(
         self, credits_res: SyncCredits, httpx_mock: HTTPXMock, base_url: str
     ) -> None:
+        # Live API returns numbers as strings; we coerce to floats
         httpx_mock.add_response(
-            url=f"{base_url}/credits/balance",
+            url=f"{base_url}/credits/history?offset=0&max_results=100",
             method="GET",
-            json={
-                "userId": "u-1",
-                "organizationId": "org-1",
-                "credits": 100.0,
-                "creditsLeft": 75.5,
-            },
+            json=[
+                {
+                    "date": "2026-05-04T12:00:00Z",
+                    "balance_after": "1081.581600",
+                    "credits_used": "-1.912000",
+                    "description": "Workflow run",
+                },
+                {
+                    "date": "2026-05-04T11:00:00Z",
+                    "balance_after": "1083.493600",
+                    "credits_used": "-2.000000",
+                    "description": "Workflow run",
+                },
+            ],
         )
-        result = credits_res.get_balance()
-        assert isinstance(result, CreditBalance)
-        assert result.user_id == "u-1"
-        assert result.credits == 100.0
-        assert result.credits_left == 75.5
+        result = credits_res.history()
+        assert isinstance(result, list)
+        assert len(result) == 2
+        assert isinstance(result[0], CreditHistoryEntry)
+        assert result[0].balance_after == 1081.5816
+        assert result[0].credits_used == -1.912
 
-
-class TestCreateBalance:
-    def test_create_balance(
+    def test_current_balance_uses_latest_entry(
         self, credits_res: SyncCredits, httpx_mock: HTTPXMock, base_url: str
     ) -> None:
         httpx_mock.add_response(
-            url=f"{base_url}/credits/create-balance",
-            method="POST",
-            json={
-                "userId": "u-new",
-                "organizationId": "org-1",
-                "credits": 0,
-                "creditsLeft": 0,
-            },
-        )
-        result = credits_res.create_balance("u-new", "org-1")
-        assert isinstance(result, CreditBalance)
-        assert result.user_id == "u-new"
-
-        request = httpx_mock.get_requests()[0]
-        body = json.loads(request.content)
-        assert body["userId"] == "u-new"
-        assert body["organizationId"] == "org-1"
-
-
-class TestGetUsage:
-    def test_get_usage(
-        self, credits_res: SyncCredits, httpx_mock: HTTPXMock, base_url: str
-    ) -> None:
-        httpx_mock.add_response(
-            url=f"{base_url}/credits/usage",
+            url=f"{base_url}/credits/history?offset=0&max_results=1",
             method="GET",
-            json={"usages": [{"creditsUsed": 10.0}]},
+            json=[{"balance_after": "500.0", "credits_used": "-1.0"}],
         )
-        result = credits_res.get_usage()
-        assert result["usages"][0]["creditsUsed"] == 10.0
+        balance = credits_res.current_balance()
+        assert balance == 500.0
 
 
-class TestGetWorkflowUsage:
-    def test_get_workflow_usage(
-        self, credits_res: SyncCredits, httpx_mock: HTTPXMock, base_url: str
+class TestRemovedMethodsRaiseClearly:
+    def test_get_balance_raises_not_supported(
+        self, credits_res: SyncCredits
     ) -> None:
-        httpx_mock.add_response(
-            url=f"{base_url}/credits/usage/workflow/wf-1",
-            method="GET",
-            json={"totalCreditsUsed": 50.0},
-        )
-        result = credits_res.get_workflow_usage("wf-1")
-        assert result["totalCreditsUsed"] == 50.0
+        with pytest.raises(NotSupportedError) as exc_info:
+            credits_res.get_balance()
+        msg = str(exc_info.value)
+        assert "no longer available" in msg
+        assert "credits.history()" in msg
 
-
-class TestRecordUsage:
-    def test_record_usage_sends_body(
-        self, credits_res: SyncCredits, httpx_mock: HTTPXMock, base_url: str
+    def test_get_usage_raises_not_supported(
+        self, credits_res: SyncCredits
     ) -> None:
-        httpx_mock.add_response(
-            url=f"{base_url}/credits/usage",
-            method="POST",
-            json={"success": True},
-        )
-        credits_res.record_usage(
-            usage_type="nodeExecution",
-            workflow_id="wf-1",
-            node_id="n-1",
-            node_type="llm",
-            node_name="GPT Node",
-            credits_used=5.0,
-            description="LLM call",
-            generation_id="gen-1",
-        )
-        request = httpx_mock.get_requests()[0]
-        body = json.loads(request.content)
-        assert body["usageType"] == "nodeExecution"
-        assert body["workflowId"] == "wf-1"
-        assert body["creditsUsed"] == 5.0
-        assert body["generationId"] == "gen-1"
+        with pytest.raises(NotSupportedError):
+            credits_res.get_usage()
 
-    def test_record_usage_minimal(
-        self, credits_res: SyncCredits, httpx_mock: HTTPXMock, base_url: str
+    def test_record_usage_raises_not_supported(
+        self, credits_res: SyncCredits
     ) -> None:
-        httpx_mock.add_response(
-            url=f"{base_url}/credits/usage",
-            method="POST",
-            json={"success": True},
-        )
-        credits_res.record_usage(usage_type="workflowGeneration")
-        request = httpx_mock.get_requests()[0]
-        body = json.loads(request.content)
-        assert body["usageType"] == "workflowGeneration"
-        assert body["creditsUsed"] == 0
-        assert "workflowId" not in body
+        with pytest.raises(NotSupportedError):
+            credits_res.record_usage(usage_type="nodeExecution")
+
+    def test_get_workflow_usage_raises_not_supported(
+        self, credits_res: SyncCredits
+    ) -> None:
+        with pytest.raises(NotSupportedError):
+            credits_res.get_workflow_usage("wf-1")
+
+    def test_create_balance_raises_not_supported(
+        self, credits_res: SyncCredits
+    ) -> None:
+        with pytest.raises(NotSupportedError):
+            credits_res.create_balance("u-new", "org-1")

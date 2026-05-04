@@ -35,24 +35,59 @@ def workflows(client: SyncHTTPClient, jobs: SyncJobs) -> SyncWorkflows:
 
 
 class TestGet:
-    def test_get_workflow(
+    UUID = "3f69dcbf-713a-493d-8d08-3fdb754825ab"
+
+    def test_get_workflow_returns_v2_object(
         self, workflows: SyncWorkflows, httpx_mock: HTTPXMock, base_url: str
     ) -> None:
         httpx_mock.add_response(
-            url=f"{base_url}/workflow/wf-1",
+            url=f"{base_url}/reference-workflow/v2/workflow-object/{self.UUID}",
             method="GET",
             json={
-                "workflowId": "wf-1",
+                "workflow_id": self.UUID,
                 "name": "Test Workflow",
                 "description": "A test",
-                "active": True,
+                "version": 3,
+                "active_status": "active",
+                "validity_status": "valid",
+                "workflow_input_node_id": "n-in",
+                "workflow_output_node_id": "n-out",
+                "starting_nodes_ids": ["n-in"],
+                "ending_nodes_ids": ["n-out"],
+                "nodes": {
+                    "n-in": {"id": "n-in", "type": "input", "name": "Input"},
+                    "n-out": {"id": "n-out", "type": "output", "name": "Output"},
+                },
+                "edges": {
+                    "e1": {
+                        "id": "e1",
+                        "from_node_id": "n-in",
+                        "to_node_id": "n-out",
+                        "label": "hard",
+                    }
+                },
             },
         )
-        result = workflows.get("wf-1")
-        assert isinstance(result, Workflow)
-        assert result.workflow_id == "wf-1"
+        result = workflows.get(self.UUID)
+        from opus_aaico.types.workflows import WorkflowObject
+
+        assert isinstance(result, WorkflowObject)
+        assert result.workflow_id == self.UUID
         assert result.name == "Test Workflow"
-        assert result.active is True
+        assert result.version == 3
+        assert len(result.nodes) == 2
+        assert len(result.edges) == 1
+        assert result.nodes["n-in"].type == "input"
+
+    def test_get_workflow_rejects_non_uuid(
+        self, workflows: SyncWorkflows
+    ) -> None:
+        from opus_aaico._exceptions import ValidationError
+
+        with pytest.raises(ValidationError) as exc_info:
+            workflows.get("4k4bJCXrUJE1XWzF")  # legacy 16-char short ID
+        assert "must be a UUID" in str(exc_info.value)
+        assert "app.opus.com" in str(exc_info.value)
 
 
 class TestList:
@@ -64,7 +99,7 @@ class TestList:
             json={
                 "totalCount": 2,
                 "workflows": [
-                    {"name": "WF 1", "workflowId": "wf-1"},
+                    {"name": "WF 1", "workflowId": "3f69dcbf-713a-493d-8d08-3fdb754825ab"},
                     {"name": "WF 2", "workflowId": "wf-2"},
                 ],
             },
@@ -178,7 +213,7 @@ class TestRun:
         )
 
         result = workflows.run(
-            "wf-1",
+            "3f69dcbf-713a-493d-8d08-3fdb754825ab",
             {"input": "hello"},
             title="Test Run",
             description="Testing",
@@ -218,7 +253,7 @@ class TestRun:
         )
 
         result = workflows.run(
-            "wf-1",
+            "3f69dcbf-713a-493d-8d08-3fdb754825ab",
             {"input": "hello"},
             poll_interval=0.01,
             timeout=5.0,
@@ -266,7 +301,7 @@ class TestRun:
 
         statuses_seen: list[str] = []
         workflows.run(
-            "wf-1",
+            "3f69dcbf-713a-493d-8d08-3fdb754825ab",
             {},
             poll_interval=0.01,
             timeout=5.0,

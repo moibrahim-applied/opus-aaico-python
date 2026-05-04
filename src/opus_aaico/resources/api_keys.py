@@ -40,6 +40,9 @@ class SyncApiKeys(SyncResource):
         data = self._client.request("GET", "/api-keys/scopes")
         return ScopesResponse(**data)
 
+    # alias for ergonomics
+    scopes = list_scopes
+
     def rotate(self, key_id: str) -> Any:
         return self._client.request("POST", f"/api-keys/{key_id}/rotate")
 
@@ -87,6 +90,10 @@ class AsyncApiKeys(AsyncResource):
     async def list_scopes(self) -> ScopesResponse:
         data = await self._client.request("GET", "/api-keys/scopes")
         return ScopesResponse(**data)
+
+    # alias for ergonomics
+    async def scopes(self) -> ScopesResponse:
+        return await self.list_scopes()
 
     async def rotate(self, key_id: str) -> Any:
         return await self._client.request("POST", f"/api-keys/{key_id}/rotate")

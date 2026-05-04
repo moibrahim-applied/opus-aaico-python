@@ -110,6 +110,133 @@ class WorkflowRunResult(_BaseModel):
     audit: Any | None = None
 
 
+# ---- v2 workflow object (from /reference-workflow/v2/workflow-object/{id}) ----
+
+
+class WorkflowNode(_BaseModel):
+    """A node in a v2 workflow's graph."""
+
+    id: str
+    type: str | None = None
+    name: str | None = None
+    description: str | None = None
+    label: str | None = None
+    handler_id: str | None = None
+    handler_version_id: str | None = None
+    handler_active_id: str | None = None
+    handler_active_version_id: str | None = None
+    handler_class: str | None = None
+    handler_status: str | None = None
+    workflow_version_id: str | None = None
+    input_schema: dict[str, Any] | None = None
+    output_schema: dict[str, Any] | None = None
+    routes: dict[str, Any] | None = None
+    mappings: dict[str, Any] | None = None
+    set_values: dict[str, Any] | None = None
+    properties: list[Any] | None = None
+    position: dict[str, Any] | None = None
+
+
+class WorkflowEdge(_BaseModel):
+    """An edge connecting two nodes in a v2 workflow."""
+
+    id: str
+    from_node_id: str
+    to_node_id: str
+    label: str | None = None
+    route_id: str | None = None
+    route_complement: bool | None = None
+
+
+class WorkflowObject(_BaseModel):
+    """Full v2 workflow object: graph, schemas, settings.
+
+    Returned by ``workflows.get(workflow_uuid)``.
+    """
+
+    workflow_id: str
+    name: str | None = None
+    description: str | None = None
+    version: int | None = None
+    major_version: int | None = None
+    minor_version: int | None = None
+    validity_status: str | None = None
+    active_status: str | None = None
+    workspace_id: str | None = None
+    workflow_input_node_id: str | None = None
+    workflow_output_node_id: str | None = None
+    starting_nodes_ids: list[str] = []
+    ending_nodes_ids: list[str] = []
+    action_items: list[Any] = []
+    public_execution_settings: dict[str, Any] | None = None
+    environment_variables: dict[str, Any] | None = None
+    environment_variables_set_values: dict[str, Any] | None = None
+    nodes: dict[str, WorkflowNode] = {}
+    edges: dict[str, WorkflowEdge] = {}
+    parent_adjacency: dict[str, list[str]] = {}
+    child_adjacency: dict[str, list[str]] = {}
+    routing_masks: Any | None = None
+
+    @property
+    def input_variables(self) -> dict[str, Any]:
+        """Convenience: input variables defined on the workflow_input node."""
+        if not self.workflow_input_node_id:
+            return {}
+        node = self.nodes.get(self.workflow_input_node_id)
+        if not node or not node.input_schema:
+            return {}
+        return node.input_schema.get("schema", {})
+
+    def find_sub_workflows(self) -> list[dict[str, Any]]:
+        """Return every Execute-Workflow style node and the workflow it points to.
+
+        A node is considered a sub-workflow call when its handler_class hints at
+        execute_workflow / sub-workflow OR its type contains 'execute' / 'workflow'.
+        """
+        out: list[dict[str, Any]] = []
+        for node in self.nodes.values():
+            t = (node.type or "").lower()
+            cls = (node.handler_class or "").lower()
+            is_sub = (
+                "execute_workflow" in t
+                or "execute_workflow" in cls
+                or "sub_workflow" in t
+                or "sub_workflow" in cls
+            )
+            if is_sub:
+                out.append(
+                    {
+                        "node_id": node.id,
+                        "node_name": node.name,
+                        "node_type": node.type,
+                        "handler_id": node.handler_id,
+                        "handler_active_id": node.handler_active_id,
+                        "handler_class": node.handler_class,
+                    }
+                )
+        return out
+
+
+class WorkflowVersionItem(_BaseModel):
+    """One version entry from /executor/workflow/{id}/versions."""
+
+    workflow_version_id: str
+    version: int
+    status: str | None = None
+    change_description: str | None = None
+    created_at: str | None = None
+    major_version: int | None = None
+    minor_version: int | None = None
+    version_label: str | None = None
+
+
+class WorkflowVersionsResponse(_BaseModel):
+    workflow_id: str
+    name: str | None = None
+    latest_version: int | None = None
+    versions: list[WorkflowVersionItem] = []
+
+
 class NodeHealthStats(_BaseModel):
     """Per-node health statistics."""
 

@@ -27,7 +27,7 @@ class OpusError(Exception):
         self.request_id = request_id
 
     def __str__(self) -> str:
-        parts = [self.message]
+        parts: list[str] = [_format_message(self.message)]
         if self.status_code is not None:
             parts.append(f"(status={self.status_code})")
         if self.request_id is not None:
@@ -85,6 +85,15 @@ class ConnectionError(OpusError):
     """Network connection failure."""
 
 
+class NotSupportedError(OpusError):
+    """Endpoint or feature is not reachable with the current auth method.
+
+    Raised when an endpoint requires browser session cookies and rejects
+    API keys (e.g., users.list, policies.list, files.search after the
+    OPUS v2 cookie-only migration).
+    """
+
+
 # Map HTTP status codes to error classes
 STATUS_CODE_MAP: dict[int, type[OpusError]] = {
     400: ValidationError,
@@ -95,18 +104,54 @@ STATUS_CODE_MAP: dict[int, type[OpusError]] = {
 }
 
 
+def _format_message(value: Any) -> str:
+    """Coerce any message value (str, list, dict, None) into a readable string."""
+    if value is None:
+        return ""
+    if isinstance(value, str):
+        return value
+    if isinstance(value, list):
+        return "; ".join(_format_message(item) for item in value if item is not None)
+    if isinstance(value, dict):
+        # Common API shape: {"message": "...", "error": "..."} - prefer message
+        for key in ("message", "error", "detail"):
+            if key in value:
+                return _format_message(value[key])
+        return str(value)
+    return str(value)
+
+
 def raise_for_status(status_code: int, body: Any, request_id: str | None = None) -> None:
     """Raise the appropriate OpusError for an HTTP error response."""
     if status_code < 400:
         return
 
-    message = "API request failed"
     if isinstance(body, dict):
-        message = body.get("message", body.get("error", message))
+        # NestJS shape: {"statusCode": ..., "message": str | list[str], ...}
+        raw = body.get("message", body.get("error", "API request failed"))
+        message = _format_message(raw)
     elif isinstance(body, str):
         message = body
     elif isinstance(body, list):
-        message = "; ".join(str(item) for item in body)
+        message = _format_message(body)
+    else:
+        message = "API request failed"
+
+    # Cookie-auth-only endpoints (users.list, policies.list, files.search, tags, ...)
+    # respond 401 "No auth cookie provided" when called with API keys. Surface this
+    # as NotSupportedError so users get a clear, actionable message instead of
+    # interpreting it as an auth-key failure.
+    if status_code == 401 and "no auth cookie" in message.lower():
+        raise NotSupportedError(
+            message=(
+                "This endpoint requires a browser session cookie and rejects API keys. "
+                "It is not reachable from the SDK in v0.5. "
+                f"(API said: {message!r})"
+            ),
+            status_code=status_code,
+            body=body,
+            request_id=request_id,
+        )
 
     error_cls = STATUS_CODE_MAP.get(status_code, APIError)
 

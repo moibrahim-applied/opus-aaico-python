@@ -7,6 +7,7 @@ from opus_aaico.types.api_keys import (
 )
 from opus_aaico.types.credits import (
     CreditBalance,
+    CreditHistoryEntry,
     CreditUsage,
 )
 from opus_aaico.types.enums import (
@@ -77,8 +78,13 @@ from opus_aaico.types.workflows import (
     PublicWorkflowsResponse,
     Workflow,
     WorkflowBlueprint,
+    WorkflowEdge,
     WorkflowGenerateSettings,
+    WorkflowNode,
+    WorkflowObject,
     WorkflowRunResult,
+    WorkflowVersionItem,
+    WorkflowVersionsResponse,
 )
 
 __all__ = [
@@ -108,8 +114,13 @@ __all__ = [
     "PublicWorkflowsResponse",
     "Workflow",
     "WorkflowBlueprint",
+    "WorkflowEdge",
     "WorkflowGenerateSettings",
+    "WorkflowNode",
+    "WorkflowObject",
     "WorkflowRunResult",
+    "WorkflowVersionItem",
+    "WorkflowVersionsResponse",
     # Jobs
     "JobAudit",
     "JobExecuteResponse",
@@ -142,6 +153,7 @@ __all__ = [
     "ScopesResponse",
     # Credits
     "CreditBalance",
+    "CreditHistoryEntry",
     "CreditUsage",
     # Policies
     "Policy",

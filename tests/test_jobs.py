@@ -37,7 +37,7 @@ class TestInitiate:
             method="POST",
             json={"jobExecutionId": "j-abc-123"},
         )
-        result = jobs.initiate("wf-1", "My Job", "A test job")
+        result = jobs.initiate("3f69dcbf-713a-493d-8d08-3fdb754825ab", "My Job", "A test job")
         assert isinstance(result, JobInitiateResponse)
         assert result.job_execution_id == "j-abc-123"
 
@@ -49,12 +49,12 @@ class TestInitiate:
             method="POST",
             json={"jobExecutionId": "j-1"},
         )
-        jobs.initiate("wf-1", "Title", "Desc", ref_user_id="user-99")
+        jobs.initiate("3f69dcbf-713a-493d-8d08-3fdb754825ab", "Title", "Desc", ref_user_id="user-99")
         request = httpx_mock.get_requests()[0]
         import json
 
         body = json.loads(request.content)
-        assert body["workflowId"] == "wf-1"
+        assert body["workflowId"] == "3f69dcbf-713a-493d-8d08-3fdb754825ab"
         assert body["title"] == "Title"
         assert body["description"] == "Desc"
         assert body["refUserId"] == "user-99"
@@ -131,7 +131,7 @@ class TestSearch:
                 ],
             },
         )
-        result = jobs.search(workflow_id="wf-1")
+        result = jobs.search(workflow_id="3f69dcbf-713a-493d-8d08-3fdb754825ab")
         assert isinstance(result, JobSearchResponse)
         assert result.total_count == 1
         assert len(result.jobs) == 1
@@ -145,7 +145,7 @@ class TestSearch:
             json={"totalCount": 0, "jobs": []},
         )
         jobs.search(
-            workflow_id="wf-1",
+            workflow_id="3f69dcbf-713a-493d-8d08-3fdb754825ab",
             workspace_ids=["ws-1", "ws-2"],
             status=["COMPLETED", "FAILED"],
             query="test",
@@ -153,7 +153,7 @@ class TestSearch:
             max_results=50,
         )
         request = httpx_mock.get_requests()[0]
-        assert "workflowId=wf-1" in str(request.url)
+        assert "workflowId=3f69dcbf-713a-493d-8d08-3fdb754825ab" in str(request.url)
         assert "workspaceIds=ws-1%2Cws-2" in str(request.url) or "workspaceIds=ws-1,ws-2" in str(
             request.url
         )

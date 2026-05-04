@@ -1,6 +1,6 @@
 """Unofficial Python SDK for the OPUS workflow automation platform."""
 
-__version__ = "0.4.0"
+__version__ = "0.5.0"
 
 from opus_aaico._async import AsyncOpusClient
 from opus_aaico._exceptions import (
@@ -8,6 +8,7 @@ from opus_aaico._exceptions import (
     AuthenticationError,
     ConnectionError,
     NotFoundError,
+    NotSupportedError,
     OpusError,
     PermissionDeniedError,
     RateLimitError,
@@ -24,6 +25,7 @@ __all__ = [
     "AuthenticationError",
     "PermissionDeniedError",
     "NotFoundError",
+    "NotSupportedError",
     "ValidationError",
     "RateLimitError",
     "APIError",
