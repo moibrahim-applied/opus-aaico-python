@@ -30,3 +30,6 @@ htmlcov/
 # OS
 .DS_Store
 Thumbs.db
+
+# Local reference docs (not part of the SDK)
+*.pdf

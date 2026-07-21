@@ -8,6 +8,7 @@ import pytest
 from pytest_httpx import HTTPXMock
 
 from opus_aaico._client import SyncHTTPClient
+from opus_aaico._exceptions import ValidationError
 from opus_aaico.resources.files import SyncFiles
 from opus_aaico.types.files import AbortUploadResponse, FileGenerateResponse, FileSearchResponse
 from opus_aaico.types.jobs import JobFileDownloadResponse
@@ -49,7 +50,7 @@ class TestUpload:
             status_code=200,
         )
 
-        result = files.upload(str(test_file))
+        result = files.upload(str(test_file), workspace_id="ws-1")
         assert result == "https://cdn.example.com/files/test.pdf"
 
         # Verify the POST body
@@ -57,6 +58,64 @@ class TestUpload:
         body = json.loads(request.content)
         assert body["fileExtension"] == ".pdf"
         assert body["accessScope"] == "organization"
+        assert body["workspaceId"] == "ws-1"
+
+    def test_upload_sends_workflow_id_scope(
+        self, files: SyncFiles, httpx_mock: HTTPXMock, base_url: str, tmp_path
+    ) -> None:
+        test_file = tmp_path / "test.pdf"
+        test_file.write_bytes(b"fake pdf content")
+        httpx_mock.add_response(
+            url=f"{base_url}/job/file/upload",
+            method="POST",
+            json={
+                "presignedUrl": "https://s3.example.com/upload?sig=abc",
+                "fileUrl": "https://cdn.example.com/files/test.pdf",
+            },
+        )
+        httpx_mock.add_response(
+            url="https://s3.example.com/upload?sig=abc", method="PUT", status_code=200
+        )
+
+        files.upload(str(test_file), workflow_id="wf-uuid")
+        body = json.loads(httpx_mock.get_requests()[0].content)
+        assert body["workflowId"] == "wf-uuid"
+        assert "workspaceId" not in body
+
+    def test_upload_falls_back_to_client_workspace(
+        self, httpx_mock: HTTPXMock, api_key: str, base_url: str, tmp_path
+    ) -> None:
+        test_file = tmp_path / "test.pdf"
+        test_file.write_bytes(b"fake pdf content")
+        client = SyncHTTPClient(
+            api_key=api_key, base_url=base_url, workspace_id="ws-default", max_retries=0
+        )
+        httpx_mock.add_response(
+            url=f"{base_url}/job/file/upload",
+            method="POST",
+            json={
+                "presignedUrl": "https://s3.example.com/upload?sig=abc",
+                "fileUrl": "https://cdn.example.com/files/test.pdf",
+            },
+        )
+        httpx_mock.add_response(
+            url="https://s3.example.com/upload?sig=abc", method="PUT", status_code=200
+        )
+
+        SyncFiles(client).upload(str(test_file))
+        body = json.loads(httpx_mock.get_requests()[0].content)
+        assert body["workspaceId"] == "ws-default"
+        client.close()
+
+    def test_upload_without_scope_raises(
+        self, files: SyncFiles, httpx_mock: HTTPXMock, tmp_path
+    ) -> None:
+        test_file = tmp_path / "test.pdf"
+        test_file.write_bytes(b"fake pdf content")
+        with pytest.raises(ValidationError, match="requires a scope"):
+            files.upload(str(test_file))
+        # No HTTP request should have been made.
+        assert httpx_mock.get_requests() == []
 
     def test_upload_bytes_returns_file_url(
         self, files: SyncFiles, httpx_mock: HTTPXMock, base_url: str
@@ -75,8 +134,10 @@ class TestUpload:
             status_code=200,
         )
 
-        result = files.upload_bytes(b"raw data", ".bin")
+        result = files.upload_bytes(b"raw data", ".bin", workspace_id="ws-1")
         assert result == "https://cdn.example.com/files/data.bin"
+        body = json.loads(httpx_mock.get_requests()[0].content)
+        assert body["workspaceId"] == "ws-1"
 
 
 class TestDownload:
