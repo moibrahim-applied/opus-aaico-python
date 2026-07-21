@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **`file_input()` and `file_array_input()` payload helpers** (exported from the
+  package root) for building workflow execute-payload input values. `file_array_input()`
+  emits the required `typeDefinition` for `File (Multiple)` / `array<file>` inputs so
+  the executor resolves each URL into an attached file — without it, the agent receives
+  the file URLs as plain text and cannot read the documents.
+
 ### Fixed
 
 - **`files.upload()` / `files.upload_bytes()` now send the required scope.** The

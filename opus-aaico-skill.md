@@ -299,6 +299,38 @@ payload = {
 
 Valid types: `str`, `float`, `bool`, `date`, `file`, `array`, `array_files`, `object`.
 
+#### Multiple files (`File (Multiple)` / `array<file>`)
+
+A bare list of file URLs is forwarded to the agent as plain text, so it never
+receives readable files. The array item type must be declared as `file` via a
+`typeDefinition`. Use the `file_input` / `file_array_input` helpers instead of
+hand-writing this:
+
+```python
+from opus_aaico import file_input, file_array_input
+
+payload = {
+    "documents": file_array_input([url1, url2]),   # File (Multiple)
+    "cover": file_input(url1),                      # single File
+}
+
+# file_array_input([...]) expands to:
+# {
+#     "value": [url1, url2],
+#     "type": "array",
+#     "typeDefinition": {
+#         "id": "file",
+#         "variable_name": "file",
+#         "allowed_types": [{"type": "file"}],
+#     },
+# }
+```
+
+Single-file inputs are unaffected (`{"value": url, "type": "file"}`). Some docs
+mention `type: "array_files"`; the shape that works is `type: "array"` plus the
+`typeDefinition` above. When in doubt, derive the exact shape from a live
+`workflows.get(workflow_id)`.
+
 ---
 
 ## Files Resource

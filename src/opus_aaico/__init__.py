@@ -16,11 +16,14 @@ from opus_aaico._exceptions import (
     ValidationError,
 )
 from opus_aaico._sync import OpusClient
+from opus_aaico.payloads import file_array_input, file_input
 
 __all__ = [
     "__version__",
     "OpusClient",
     "AsyncOpusClient",
+    "file_input",
+    "file_array_input",
     "OpusError",
     "AuthenticationError",
     "PermissionDeniedError",
