@@ -3,8 +3,9 @@
 from __future__ import annotations
 
 import os
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
+from opus_aaico._exceptions import ValidationError
 from opus_aaico._utils.files import (
     get_file_extension,
     upload_bytes_to_presigned_url_async,
@@ -22,6 +23,37 @@ from opus_aaico.types.files import (
 )
 from opus_aaico.types.jobs import JobFileDownloadResponse, JobFileUploadResponse
 
+if TYPE_CHECKING:
+    from opus_aaico._client import AsyncHTTPClient, SyncHTTPClient
+
+
+def _upload_scope_fields(
+    client: SyncHTTPClient | AsyncHTTPClient,
+    workflow_id: str | None,
+    workspace_id: str | None,
+) -> dict[str, str]:
+    """Resolve the scope field required by ``/job/file/upload``.
+
+    The endpoint now requires one of ``workflowId`` or ``workspaceId``. Prefer an
+    explicit ``workflow_id``, then an explicit ``workspace_id``, then fall back to
+    the client's configured workspace. Raise ``ValidationError`` if none is found.
+    """
+    if workflow_id:
+        return {"workflowId": workflow_id}
+    if workspace_id:
+        return {"workspaceId": workspace_id}
+    if client.workspace_id:
+        return {"workspaceId": client.workspace_id}
+    raise ValidationError(
+        message=(
+            "File upload requires a scope: pass workflow_id= or workspace_id= to "
+            "upload(), or configure a default workspace via OpusClient(workspace_id=...) "
+            "or the OPUS_WORKSPACE_ID environment variable. The /job/file/upload endpoint "
+            "no longer accepts requests without one of workflowId or workspaceId."
+        ),
+        status_code=400,
+    )
+
 
 class SyncFiles(SyncResource):
     """Synchronous files resource."""
@@ -32,12 +64,20 @@ class SyncFiles(SyncResource):
         self,
         file_path: str,
         access_scope: str = "organization",
+        workflow_id: str | None = None,
+        workspace_id: str | None = None,
     ) -> str:
-        """Upload a local file and return its permanent URL."""
+        """Upload a local file and return its permanent URL.
+
+        The ``/job/file/upload`` endpoint requires one of ``workflow_id`` or
+        ``workspace_id``. If neither is passed, the client's configured workspace
+        is used; a ``ValidationError`` is raised when none can be resolved.
+        """
         ext = get_file_extension(file_path)
         body: dict[str, Any] = {
             "fileExtension": ext,
             "accessScope": access_scope,
+            **_upload_scope_fields(self._client, workflow_id, workspace_id),
         }
         data = self._client.request("POST", "/job/file/upload", json=body)
         resp = JobFileUploadResponse(**data)
@@ -49,11 +89,17 @@ class SyncFiles(SyncResource):
         data: bytes,
         file_extension: str,
         access_scope: str = "organization",
+        workflow_id: str | None = None,
+        workspace_id: str | None = None,
     ) -> str:
-        """Upload raw bytes and return the permanent URL."""
+        """Upload raw bytes and return the permanent URL.
+
+        Requires one of ``workflow_id`` or ``workspace_id`` (see :meth:`upload`).
+        """
         body: dict[str, Any] = {
             "fileExtension": file_extension,
             "accessScope": access_scope,
+            **_upload_scope_fields(self._client, workflow_id, workspace_id),
         }
         resp_data = self._client.request("POST", "/job/file/upload", json=body)
         resp = JobFileUploadResponse(**resp_data)
@@ -174,11 +220,19 @@ class AsyncFiles(AsyncResource):
         self,
         file_path: str,
         access_scope: str = "organization",
+        workflow_id: str | None = None,
+        workspace_id: str | None = None,
     ) -> str:
+        """Upload a local file and return its permanent URL.
+
+        Requires one of ``workflow_id`` or ``workspace_id`` (see
+        :meth:`SyncFiles.upload`).
+        """
         ext = get_file_extension(file_path)
         body: dict[str, Any] = {
             "fileExtension": ext,
             "accessScope": access_scope,
+            **_upload_scope_fields(self._client, workflow_id, workspace_id),
         }
         data = await self._client.request("POST", "/job/file/upload", json=body)
         resp = JobFileUploadResponse(**data)
@@ -190,10 +244,17 @@ class AsyncFiles(AsyncResource):
         data: bytes,
         file_extension: str,
         access_scope: str = "organization",
+        workflow_id: str | None = None,
+        workspace_id: str | None = None,
     ) -> str:
+        """Upload raw bytes and return the permanent URL.
+
+        Requires one of ``workflow_id`` or ``workspace_id``.
+        """
         body: dict[str, Any] = {
             "fileExtension": file_extension,
             "accessScope": access_scope,
+            **_upload_scope_fields(self._client, workflow_id, workspace_id),
         }
         resp_data = await self._client.request("POST", "/job/file/upload", json=body)
         resp = JobFileUploadResponse(**resp_data)

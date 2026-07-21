@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **`files.upload()` / `files.upload_bytes()` now send the required scope.** The
+  `/job/file/upload` endpoint schema changed and now requires one of `workflowId`
+  or `workspaceId` in the request body; requests without either are rejected. Both
+  upload methods (sync and async) gained `workflow_id` and `workspace_id`
+  parameters. When neither is passed, the client's configured workspace
+  (`OpusClient(workspace_id=...)` / `OPUS_WORKSPACE_ID`) is used as a fallback; if
+  no scope can be resolved, a `ValidationError` is raised before any HTTP call.
+
 ## [0.5.0] - 2026-05-04
 
 ### Fixed (production-blocking)

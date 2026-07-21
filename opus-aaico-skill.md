@@ -304,10 +304,14 @@ Valid types: `str`, `float`, `bool`, `date`, `file`, `array`, `array_files`, `ob
 ## Files Resource
 
 ```python
-# Upload a local file (handles presigned URL automatically)
+# Upload a local file (handles presigned URL automatically).
+# Requires a scope: pass workflow_id= OR workspace_id= (or set a default
+# workspace on the client / OPUS_WORKSPACE_ID). Raises ValidationError if none.
 file_url = client.files.upload(
     file_path: str,
     access_scope: str = "organization",
+    workflow_id: str = None,     # one of workflow_id / workspace_id required
+    workspace_id: str = None,
 ) -> str  # returns permanent file URL
 
 # Upload from bytes
@@ -315,6 +319,8 @@ file_url = client.files.upload_bytes(
     data: bytes,
     file_extension: str,         # e.g. ".pdf"
     access_scope: str = "organization",
+    workflow_id: str = None,     # one of workflow_id / workspace_id required
+    workspace_id: str = None,
 ) -> str
 
 # Get download URL
@@ -634,7 +640,7 @@ ReviewItem:           id, job_execution_id, type, status, node_id, node_name
 
 ```python
 client = OpusClient(api_key="sk-...")
-file_url = client.files.upload("./document.pdf")
+file_url = client.files.upload("./document.pdf", workflow_id="wf-123")
 result = client.workflows.run(
     workflow_id="wf-123",
     payload={

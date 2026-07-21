@@ -117,8 +117,10 @@ print(result.execution_time)
 ### Upload a File
 
 ```python
-# Upload a local file (handles presigned URL flow automatically)
-file_url = client.files.upload("./report.pdf")
+# Upload a local file (handles presigned URL flow automatically).
+# The upload endpoint requires a scope -- pass workflow_id or workspace_id
+# (or configure a default workspace via OpusClient(workspace_id=...) / OPUS_WORKSPACE_ID).
+file_url = client.files.upload("./report.pdf", workflow_id="wf-123")
 
 # Use it in a workflow
 result = client.workflows.run(
