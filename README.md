@@ -131,6 +131,33 @@ result = client.workflows.run(
 )
 ```
 
+### Pass Multiple Files to a Workflow
+
+For a `File (Multiple)` / `array<file>` input, a bare list of URLs is forwarded to
+the agent as plain text -- so a vision/extraction agent receives links instead of
+readable files. Use `file_array_input()` to build the value with the required
+`typeDefinition`, which tells OPUS to resolve each URL into an attached file:
+
+```python
+from opus_aaico import OpusClient, file_input, file_array_input
+
+client = OpusClient(api_key="sk-...", workspace_id="ws-...")
+
+urls = [
+    client.files.upload("./doc1.pdf", workflow_id="wf-123"),
+    client.files.upload("./doc2.pdf", workflow_id="wf-123"),
+]
+
+result = client.workflows.run(
+    workflow_id="wf-123",
+    payload={
+        "documents": file_array_input(urls),        # File (Multiple) input
+        "cover_letter": file_input(urls[0]),        # single File input
+        "instructions": {"value": "Compare these", "type": "str"},
+    },
+)
+```
+
 ### Low-Level Job Control
 
 ```python
