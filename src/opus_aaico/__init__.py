@@ -1,6 +1,6 @@
 """Unofficial Python SDK for the OPUS workflow automation platform."""
 
-__version__ = "0.5.0"
+__version__ = "0.6.0"
 
 from opus_aaico._async import AsyncOpusClient
 from opus_aaico._exceptions import (
